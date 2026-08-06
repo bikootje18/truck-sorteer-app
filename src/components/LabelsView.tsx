@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import loadsJson from '../data/loads.json';
 import { fmtDate } from '../lib/format';
+import { useStore } from '../store';
 import type { Load } from '../types';
 
 const loads = loadsJson as Load[];
 
 export default function LabelsView() {
-  const [po, setPo] = useState(loads[0].po);
+  const [po, setPo] = useState(() => useStore.getState().activePo ?? loads[0].po);
   const load = loads.find(l => l.po === po) ?? loads[0];
 
   return (

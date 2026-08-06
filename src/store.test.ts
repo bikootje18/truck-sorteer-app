@@ -74,3 +74,27 @@ describe('EAN map actions', () => {
     expect(useStore.getState().eanMap['5449000123457']).toBeUndefined();
   });
 });
+
+describe('persistence', () => {
+  it('rehydrates progress and learned EANs from localStorage', async () => {
+    localStorage.setItem(
+      'sorteer:v1:state',
+      JSON.stringify({
+        state: {
+          activePo: 'PO9',
+          progressByPo: { PO9: { 'PO9:2': { status: 'done' } } },
+          eanMap: { '111111111111': '999999' },
+        },
+        version: 0,
+      }),
+    );
+
+    await useStore.persist.rehydrate();
+
+    const s = useStore.getState();
+    expect(s.progressByPo['PO9']['PO9:2'].status).toBe('done');
+    // Learned entries survive rehydration (and, by construction of the
+    // store's merge function, win over the baked-in seed map).
+    expect(s.eanMap['111111111111']).toBe('999999');
+  });
+});

@@ -11,6 +11,11 @@ PWA voor het uitsorteren van gemixte pallets naar uniforme stapels
 4. Open de app op de Zebra met internet → de nieuwe truck staat erin.
    Voortgang en geleerde barcodes blijven bewaard.
 
+> **Let op:** `npm run parse` herschrijft `loads.json` in zijn geheel op basis
+> van één Excel-werkboek. Een nieuwe truck moet dus als extra tabblad in het
+> bestaande Excel-bestand worden toegevoegd — anders verdwijnen de bestaande
+> trucks uit de app.
+
 ## Geleerde barcodes veiligstellen
 
 Instellingen → "Exporteer barcodelijst" → plak de JSON in de chat met Claude.
@@ -25,6 +30,10 @@ de lijst een reset van het apparaat.
 - `npm run icons` — PWA-iconen regenereren
 
 ## Eerste installatie op de Zebra
+
+> **Eenmalig vóór de allereerste deploy:** zet in de GitHub-repo onder
+> Settings → Pages → Source de optie "GitHub Actions" (anders faalt de
+> deploy-workflow stil).
 
 1. Open de GitHub Pages URL in Chrome op de Zebra.
 2. Menu ⋮ → "App installeren" / "Toevoegen aan startscherm".

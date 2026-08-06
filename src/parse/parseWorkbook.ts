@@ -116,6 +116,17 @@ export function parseWorkbook(wb: XLSX.WorkBook): Load[] {
       if (!isFull && /^[A-Z]{1,2}$/.test(rawLetter)) curLetter = rawLetter;
       const rawNo = r[cols.palletNo];
       if (!isFull && typeof rawNo === 'number') curNo = rawNo;
+      if (!isFull && curLetter === '') {
+        throw new Error(
+          `Sheet "${sheetName}", row ${sheetRow}: data row appeared before the first pallet letter`,
+        );
+      }
+      const cases = Number(r[cols.cases]);
+      if (!Number.isFinite(cases) || cases < 0) {
+        throw new Error(
+          `Sheet "${sheetName}", row ${sheetRow}: invalid cases value ${JSON.stringify(r[cols.cases])}`,
+        );
+      }
       return {
         id: `${po}:${sheetRow}`,
         stackNo: i + 1,
@@ -123,7 +134,7 @@ export function parseWorkbook(wb: XLSX.WorkBook): Load[] {
         description: str(r[cols.description]),
         batch: str(r[cols.batch]),
         bbd: excelDateToIso(r[cols.bbd]),
-        cases: Number(r[cols.cases] ?? 0),
+        cases,
         inPallet: isFull ? 'VOL' : curLetter,
         inPalletNo: isFull ? 0 : curNo,
         category,
@@ -138,6 +149,10 @@ export function parseWorkbook(wb: XLSX.WorkBook): Load[] {
     for (const l of lines) perPallet.set(l.inPallet, (perPallet.get(l.inPallet) ?? 0) + 1);
     for (const l of lines)
       l.presorted = l.category === 'Full Pallet' || perPallet.get(l.inPallet) === 1;
+
+    if (loads.some(l => l.po === po)) {
+      throw new Error(`Duplicate PO "${po}" (sheet "${sheetName}")`);
+    }
 
     loads.push({
       po,

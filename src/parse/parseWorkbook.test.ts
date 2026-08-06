@@ -108,3 +108,21 @@ describe('parseWorkbook against the real file', () => {
     expect(plzw.lines[0].id).toMatch(/^RDS014871-PLZW22L24:\d+$/);
   });
 });
+
+describe('parseWorkbook guards', () => {
+  it('throws on a non-numeric cases value instead of silently coercing to 0', () => {
+    const header = [
+      'Order No', 'PO No', 'Material', 'Material Description', 'Batch',
+      'SLED/BBD', 'Total Cases', 'Pallet Label', 'Pallet Category', 'Plant Name', 'Customer',
+    ];
+    const row = [
+      '1', 'PO-TEST', '123456', 'Test Article', 'BATCH1', '2026-01-01',
+      'n/a', 'A', 'Rainbow Pallet', 'Plant X', 'Cust Y',
+    ];
+    const sheet = XLSX.utils.aoa_to_sheet([header, row]);
+    const badWb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(badWb, sheet, 'BadCases');
+
+    expect(() => parseWorkbook(badWb)).toThrow(/BadCases/);
+  });
+});

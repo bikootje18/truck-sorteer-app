@@ -30,6 +30,7 @@ export default function ScanScreen({ load, allLoads }: { load: Load; allLoads: L
   const [value, setValue] = useState('');
   const [manualMode, setManualMode] = useState(false);
   const [partialInput, setPartialInput] = useState<string | null>(null);
+  const [partialError, setPartialError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Keep the scan input focused so the wedge scanner always lands here —
@@ -82,12 +83,17 @@ export default function ScanScreen({ load, allLoads }: { load: Load; allLoads: L
   function submit(raw: string) {
     if (!raw.trim()) return;
     setPartialInput(null);
-    const r = resolveScan(raw, load, eanMap, progress, allLoads);
-    if (r.kind === 'invalid' && manualMode) {
+    setPartialError(false);
+    if (manualMode) {
       const matches = resolveManual(raw, load);
-      setPanel(matches.length ? { kind: 'manual', matches } : { kind: 'invalid' });
-      return;
+      if (matches.length) {
+        setPanel({ kind: 'manual', matches });
+        return;
+      }
+      // No article match — fall through so a genuine scan still works
+      // while manual mode is left on.
     }
+    const r = resolveScan(raw, load, eanMap, progress, allLoads);
     applyResult(r);
   }
 
@@ -159,7 +165,12 @@ export default function ScanScreen({ load, allLoads }: { load: Load; allLoads: L
               >
                 ✓ Alles verplaatst
               </button>
-              <button className="btn" onClick={() => setPartialInput('')}>Deels…</button>
+              <button
+                className="btn"
+                onClick={() => { setPartialInput(''); setPartialError(false); }}
+              >
+                Deels…
+              </button>
             </>
           ) : (
             <>
@@ -169,20 +180,30 @@ export default function ScanScreen({ load, allLoads }: { load: Load; allLoads: L
                 inputMode="numeric"
                 placeholder="Aantal verplaatste trays"
                 value={partialInput}
-                onChange={e => setPartialInput(e.target.value)}
+                onChange={e => { setPartialInput(e.target.value); setPartialError(false); }}
               />
+              {partialError && <p className="meta">Vul een aantal groter dan 0 in</p>}
               <button
                 className="btn btn-primary"
                 onClick={() => {
                   const n = Number(partialInput);
-                  if (n > 0) {
+                  if (partialInput.trim() !== '' && Number.isFinite(n) && n > 0) {
                     markPartial(load.po, panel.line.id, n);
                     setPanel({ kind: 'ready' });
                     setPartialInput(null);
+                    setPartialError(false);
+                  } else {
+                    setPartialError(true);
                   }
                 }}
               >
                 Opslaan
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => { setPartialInput(null); setPartialError(false); }}
+              >
+                Annuleren
               </button>
             </>
           )}
