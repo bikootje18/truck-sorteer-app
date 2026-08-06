@@ -55,7 +55,7 @@ describe('OverviewScreen', () => {
   it('can group per stack instead', () => {
     render(<OverviewScreen load={load} />);
     fireEvent.click(screen.getByText('Per stapel'));
-    expect(screen.getByText('Stapel 1')).toBeTruthy();
-    expect(screen.getByText('Stapel 3')).toBeTruthy();
+    expect(screen.getByText('Stapel 1 · 0/1 klaar')).toBeTruthy();
+    expect(screen.getByText('Stapel 3 · 0/1 klaar')).toBeTruthy();
   });
 });
