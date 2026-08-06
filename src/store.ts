@@ -72,8 +72,9 @@ export const useStore = create<AppState>()(
         }),
       unlearnEan: (ean) =>
         set(s => {
+          const key = canonicalEan(ean) ?? ean;
           const eanMap = { ...s.eanMap };
-          delete eanMap[ean];
+          delete eanMap[key];
           return { eanMap };
         }),
       resetProgress: (po) =>

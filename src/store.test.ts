@@ -67,4 +67,10 @@ describe('EAN map actions', () => {
     useStore.getState().unlearnEan('5449000123457');
     expect(useStore.getState().eanMap['5449000123457']).toBeUndefined();
   });
+
+  it('unlearns an EAN with leading zeros', () => {
+    useStore.getState().learnEan('5449000123457', '108450');
+    useStore.getState().unlearnEan('05449000123457');
+    expect(useStore.getState().eanMap['5449000123457']).toBeUndefined();
+  });
 });
