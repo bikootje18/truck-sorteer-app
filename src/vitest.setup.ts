@@ -1,4 +1,4 @@
-// Polyfill for localStorage.clear() in vitest + jsdom
+// Node's built-in localStorage stub shadows jsdom's Storage in vitest; provide a functional in-memory one.
 if (typeof localStorage !== 'undefined' && typeof localStorage.clear !== 'function') {
   // Create a mock storage object that wraps the original
   const data: Record<string, string> = {};
