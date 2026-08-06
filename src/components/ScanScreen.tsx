@@ -36,12 +36,12 @@ export default function ScanScreen({ load, allLoads }: { load: Load; allLoads: L
   // except while the teach dialog needs its own keyboard input.
   const teachOpen = panel.kind === 'teach';
   useEffect(() => {
-    if (teachOpen) return;
+    if (teachOpen || partialInput !== null) return;
     const t = setInterval(() => {
       if (document.activeElement !== inputRef.current) inputRef.current?.focus();
     }, 400);
     return () => clearInterval(t);
-  }, [teachOpen]);
+  }, [teachOpen, partialInput]);
 
   const articles = useMemo(() => {
     const m = new Map<string, string>();
@@ -99,7 +99,7 @@ export default function ScanScreen({ load, allLoads }: { load: Load; allLoads: L
   }
 
   return (
-    <div className="screen" onClick={() => { if (!teachOpen) inputRef.current?.focus(); }}>
+    <div className="screen" onClick={() => { if (!teachOpen && partialInput === null) inputRef.current?.focus(); }}>
       <div className="sticky-head">
         {load.po} · {doneStacks}/{load.lines.length} stapels klaar
       </div>

@@ -1,8 +1,11 @@
+let ctx: AudioContext | null = null;
+
 /** Haptic + audio cue. Never throws (AudioContext is absent in tests/older devices). */
 export function feedback(kind: 'ok' | 'warn'): void {
   try {
     navigator.vibrate?.(kind === 'ok' ? 80 : [120, 80, 120]);
-    const ctx = new AudioContext();
+    ctx ??= new AudioContext();
+    if (ctx.state === 'suspended') void ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.frequency.value = kind === 'ok' ? 880 : 220;

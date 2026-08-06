@@ -83,4 +83,15 @@ describe('ScanScreen', () => {
     fireEvent.click(screen.getByText(/MONSTER ULTRA NO/));
     expect(screen.getByText('STAPEL 7')).toBeTruthy();
   });
+
+  it('keeps focus in the partial-count field', () => {
+    useStore.setState({ eanMap: { [EAN]: '108450' } });
+    render(<ScanScreen load={load} allLoads={[load]} />);
+    scan(EAN);
+    fireEvent.click(screen.getByText('Deels…'));
+    const num = screen.getByPlaceholderText('Aantal verplaatste trays');
+    num.focus();
+    fireEvent.click(num);
+    expect(document.activeElement).toBe(num);
+  });
 });
