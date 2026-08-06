@@ -23,7 +23,8 @@ export default defineConfig({
     }),
   ],
   test: {
-    environment: 'happy-dom',
+    environment: 'jsdom',
     passWithNoTests: true,
+    setupFiles: ['src/vitest.setup.ts'],
   },
 });
