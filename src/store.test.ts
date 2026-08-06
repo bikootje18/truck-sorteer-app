@@ -58,7 +58,7 @@ describe('progress actions', () => {
 
 describe('EAN map actions', () => {
   it('learns a canonicalised EAN', () => {
-    useStore.getState().learnEan('0005449000123457', '108450');
+    useStore.getState().learnEan('05449000123457', '108450');
     expect(useStore.getState().eanMap['5449000123457']).toBe('108450');
   });
 

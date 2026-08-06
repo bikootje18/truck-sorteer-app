@@ -1,30 +1,41 @@
-import { vi } from 'vitest';
+// Polyfill for localStorage.clear() in vitest + jsdom
+if (typeof localStorage !== 'undefined' && typeof localStorage.clear !== 'function') {
+  // Create a mock storage object that wraps the original
+  const data: Record<string, string> = {};
 
-// Polyfill localStorage if it doesn't exist or is incomplete
-if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'function') {
-  const mockStorage: Record<string, string> = {};
-  const storage = {
-    getItem: (key: string) => mockStorage[key] || null,
-    setItem: (key: string, value: string) => {
-      mockStorage[key] = value;
+  // Copy existing data
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key) data[key] = localStorage.getItem(key) || '';
+  }
+
+  const mockStorage = {
+    clear: function() {
+      Object.keys(data).forEach(key => delete data[key]);
     },
-    removeItem: (key: string) => {
-      delete mockStorage[key];
+    getItem: function(key: string) {
+      return data[key] ?? null;
     },
-    clear: () => {
-      Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
+    setItem: function(key: string, value: string) {
+      data[key] = String(value);
     },
-    key: (index: number) => {
-      const keys = Object.keys(mockStorage);
-      return keys[index] || null;
+    removeItem: function(key: string) {
+      delete data[key];
     },
-    length: 0,
+    key: function(index: number) {
+      return Object.keys(data)[index] ?? null;
+    },
   };
-  Object.defineProperty(storage, 'length', {
-    get: () => Object.keys(mockStorage).length,
+
+  Object.defineProperty(mockStorage, 'length', {
+    get: function() {
+      return Object.keys(data).length;
+    },
+    configurable: true,
   });
+
   Object.defineProperty(global, 'localStorage', {
-    value: storage,
+    value: mockStorage,
     writable: true,
   });
 }
