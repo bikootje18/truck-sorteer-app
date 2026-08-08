@@ -24,27 +24,29 @@ beforeEach(() => {
   useStore.setState({ progressByPo: {}, eanMap: {}, lastUndo: null, activePo: 'PO1', view: 'scan' });
 });
 
-describe('ScanScreen', () => {
-  it('teaches an unknown EAN, then shows the destination', () => {
+describe('ScanScreen (pallet mode)', () => {
+  it('teaches an unknown EAN, then shows the pallet card', () => {
     render(<ScanScreen load={load} allLoads={[load]} />);
     scan(EAN);
     expect(screen.getByText('Welk artikel is dit?')).toBeTruthy();
     fireEvent.click(screen.getByText(/MONSTER ULTRA NO/));
-    expect(screen.getByText('STAPEL 7')).toBeTruthy();
+    expect(screen.getByText('PALLET A')).toBeTruthy();
     expect(useStore.getState().eanMap[EAN]).toBe('108450');
   });
 
-  it('shows destination directly for a learned EAN and marks done on confirm', () => {
+  it('shows the pallet card for a learned EAN and marks a stack done', () => {
     useStore.setState({ eanMap: { [EAN]: '108450' } });
     render(<ScanScreen load={load} allLoads={[load]} />);
     scan(EAN);
+    expect(screen.getByText('PALLET A')).toBeTruthy();
     expect(screen.getByText('STAPEL 7')).toBeTruthy();
-    fireEvent.click(screen.getByText('✓ Alles verplaatst'));
+    fireEvent.click(screen.getByText('✓ Klaar'));
     expect(useStore.getState().progressByPo['PO1']['PO1:2'].status).toBe('done');
     expect(screen.getByText('↩︎ Ongedaan maken')).toBeTruthy();
+    expect(screen.getByText(/Pallet klaar/)).toBeTruthy();
   });
 
-  it('offers the batch picker when two batches are open', () => {
+  it('skips the batch picker when both batches share the pallet', () => {
     const two: Load = {
       ...load,
       lines: [mkLine({ id: 'PO1:2', batch: 'AAA' }), mkLine({ id: 'PO1:3', batch: 'BBB', stackNo: 8 })],
@@ -52,8 +54,26 @@ describe('ScanScreen', () => {
     useStore.setState({ eanMap: { [EAN]: '108450' } });
     render(<ScanScreen load={two} allLoads={[two]} />);
     scan(EAN);
+    expect(screen.queryByText('Welke batch staat op de tray?')).toBeNull();
+    expect(screen.getByText('PALLET A')).toBeTruthy();
+    expect(screen.getByText('STAPEL 7')).toBeTruthy();
+    expect(screen.getByText('STAPEL 8')).toBeTruthy();
+  });
+
+  it('asks for the batch when batches sit on different pallets', () => {
+    const two: Load = {
+      ...load,
+      lines: [
+        mkLine({ id: 'PO1:2', batch: 'AAA', inPallet: 'A' }),
+        mkLine({ id: 'PO1:3', batch: 'BBB', stackNo: 8, inPallet: 'B' }),
+      ],
+    };
+    useStore.setState({ eanMap: { [EAN]: '108450' } });
+    render(<ScanScreen load={two} allLoads={[two]} />);
+    scan(EAN);
     expect(screen.getByText('Welke batch staat op de tray?')).toBeTruthy();
     fireEvent.click(screen.getByText('BBB'));
+    expect(screen.getByText('PALLET B')).toBeTruthy();
     expect(screen.getByText('STAPEL 8')).toBeTruthy();
   });
 
@@ -64,14 +84,15 @@ describe('ScanScreen', () => {
     expect(screen.getByText('Niet op deze vrachtwagen')).toBeTruthy();
   });
 
-  it('warns when the stack was already completed', () => {
+  it('shows the ticked pallet card with a note after a duplicate scan', () => {
     useStore.setState({
       eanMap: { [EAN]: '108450' },
       progressByPo: { PO1: { 'PO1:2': { status: 'done' } } },
     });
     render(<ScanScreen load={load} allLoads={[load]} />);
     scan(EAN);
-    expect(screen.getByText(/was al klaar/)).toBeTruthy();
+    expect(screen.getByText('PALLET A')).toBeTruthy();
+    expect(screen.getByText(/al afgevinkt/)).toBeTruthy();
   });
 
   it('supports manual text search in keyboard mode', () => {
@@ -81,10 +102,10 @@ describe('ScanScreen', () => {
     fireEvent.change(input, { target: { value: 'ultra' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     fireEvent.click(screen.getByText(/MONSTER ULTRA NO/));
-    expect(screen.getByText('STAPEL 7')).toBeTruthy();
+    expect(screen.getByText('PALLET A')).toBeTruthy();
   });
 
-  it('keeps focus in the partial-count field', () => {
+  it('records a partial count from a pallet row and keeps field focus', () => {
     useStore.setState({ eanMap: { [EAN]: '108450' } });
     render(<ScanScreen load={load} allLoads={[load]} />);
     scan(EAN);
@@ -93,5 +114,27 @@ describe('ScanScreen', () => {
     num.focus();
     fireEvent.click(num);
     expect(document.activeElement).toBe(num);
+    fireEvent.change(num, { target: { value: '10' } });
+    fireEvent.click(screen.getByText('Opslaan'));
+    expect(useStore.getState().progressByPo['PO1']['PO1:2']).toMatchObject({
+      status: 'partial', movedCases: 10,
+    });
+    expect(screen.getByText(/10 verplaatst/)).toBeTruthy();
+  });
+
+  it('shows only the scanned line for a Full Pallet (VOL) scan', () => {
+    const vol: Load = {
+      ...load,
+      lines: [
+        mkLine({ id: 'PO1:2', inPallet: 'VOL', category: 'Full Pallet', presorted: true }),
+        mkLine({ id: 'PO1:9', material: '999998', inPallet: 'VOL', category: 'Full Pallet', presorted: true, stackNo: 9 }),
+      ],
+    };
+    useStore.setState({ eanMap: { [EAN]: '108450' } });
+    render(<ScanScreen load={vol} allLoads={[vol]} />);
+    scan(EAN);
+    expect(screen.getByText('VOLLE PALLET')).toBeTruthy();
+    expect(screen.getByText('STAPEL 7')).toBeTruthy();
+    expect(screen.queryByText('STAPEL 9')).toBeNull();
   });
 });

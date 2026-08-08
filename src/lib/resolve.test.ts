@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Line, Load } from '../types';
-import { resolveManual, resolveScan } from './resolve';
+import { resolveManual, resolveScan, resolveScanToPallet } from './resolve';
 
 const mkLine = (over: Partial<Line>): Line => ({
   id: 'PO1:2', stackNo: 1, material: '108450',
@@ -94,5 +94,41 @@ describe('resolveManual', () => {
   });
   it('returns empty for blank queries', () => {
     expect(resolveManual('  ', load)).toEqual([]);
+  });
+});
+
+describe('resolveScanToPallet', () => {
+  it('resolves a single open line straight to its pallet', () => {
+    const line = mkLine({});
+    const r = resolveScanToPallet(EAN, mkLoad([line]), { [EAN]: '108450' }, {}, []);
+    expect(r).toEqual({ kind: 'pallet', inPallet: 'A', focus: line, wasAllDone: false });
+  });
+
+  it('skips the batch picker when both open batches share one pallet', () => {
+    const a = mkLine({ id: 'PO1:2', batch: 'AAA' });
+    const b = mkLine({ id: 'PO1:3', batch: 'BBB', stackNo: 2 });
+    const r = resolveScanToPallet(EAN, mkLoad([a, b]), { [EAN]: '108450' }, {}, []);
+    expect(r.kind).toBe('pallet');
+    if (r.kind === 'pallet') expect(r.inPallet).toBe('A');
+  });
+
+  it('still asks for the batch when open batches span different pallets', () => {
+    const a = mkLine({ id: 'PO1:2', batch: 'AAA', inPallet: 'A' });
+    const b = mkLine({ id: 'PO1:3', batch: 'BBB', stackNo: 2, inPallet: 'B' });
+    const r = resolveScanToPallet(EAN, mkLoad([a, b]), { [EAN]: '108450' }, {}, []);
+    expect(r.kind).toBe('pick');
+  });
+
+  it('shows the pallet with a was-all-done flag after a duplicate scan', () => {
+    const line = mkLine({});
+    const r = resolveScanToPallet(EAN, mkLoad([line]), { [EAN]: '108450' },
+      { 'PO1:2': { status: 'done' } }, []);
+    expect(r).toEqual({ kind: 'pallet', inPallet: 'A', focus: line, wasAllDone: true });
+  });
+
+  it('passes teach and not-on-truck through unchanged', () => {
+    expect(resolveScanToPallet(EAN, mkLoad([mkLine({})]), {}, {}, []).kind).toBe('teach');
+    const load = mkLoad([mkLine({})]);
+    expect(resolveScanToPallet(EAN, load, { [EAN]: '999999' }, {}, [load]).kind).toBe('notOnTruck');
   });
 });
